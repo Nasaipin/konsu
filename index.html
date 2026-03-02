@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KONSU UENR</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #059669;
+            --danger: #dc2626;
+            --bg: #f8fafc;
+            --text: #0f172a;
+        }
+
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 80px; }
+        .navbar { background: white; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
+        .nav-brand { font-size: 1.8rem; font-weight: 800; color: var(--primary); }
+        
+        .container { max-width: 900px; margin: 2rem auto; padding: 0 20px; }
+        .card { background: white; border-radius: 15px; padding: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 2rem; border: 1px solid #e2e8f0; }
+        
+        /* Login Form */
+        .login-box { max-width: 400px; margin: 100px auto; text-align: center; }
+
+        /* Typography */
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 10px; }
+        h2 { font-size: 2rem; color: var(--primary); border-left: 6px solid var(--primary); padding-left: 15px; margin-top: 30px; }
+        p, label, span { font-size: 1.2rem; }
+
+        .timer-banner { background: #1e293b; color: white; text-align: center; padding: 10px; font-weight: bold; font-size: 1.4rem; position: sticky; top: 75px; z-index: 999; }
+        .timer-expired { background: var(--danger); }
+
+        .tabs { display: flex; gap: 10px; background: #e2e8f0; padding: 6px; border-radius: 12px; }
+        .tab { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: 600; background: transparent; transition: 0.3s; }
+        .tab.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+        input, textarea { width: 100%; padding: 15px; margin: 10px 0; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 1.1rem; box-sizing: border-box; }
+        .btn { padding: 15px 25px; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 1.2rem; transition: 0.2s; display: inline-block; text-align: center; }
+        .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-success { background: var(--success); color: white; width: 100%; margin-top: 20px; height: 70px; font-size: 1.5rem; }
+        .btn-danger { background: var(--danger); color: white; padding: 10px; font-size: 0.9rem; }
+
+        .candidate-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-top: 15px; }
+        .candidate-card { border: 2px solid #e2e8f0; border-radius: 15px; padding: 15px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; }
+        .candidate-card.selected { border-color: var(--success); background: #ecfdf5; box-shadow: 0 0 0 4px #d1fae5; }
+        .candidate-img { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; border: 4px solid #f1f5f9; }
+        
+        .admin-cand-item { display: flex; align-items: center; gap: 15px; background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #e2e8f0; }
+        .thumb { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div id="timer-display" class="timer-banner hidden">Time Remaining: 00:00</div>
+
+<nav class="navbar">
+    <div class="nav-brand">KONSU UENR</div>
+    <div class="tabs" style="width: 300px;">
+        <button class="tab active" id="tab-user" onclick="switchView('user')">Voting</button>
+        <button class="tab" id="tab-admin" onclick="switchView('admin')">Admin</button>
+    </div>
+</nav>
+
+<div class="container">
+    <div id="user-view">
+        <div id="user-content"></div>
+    </div>
+
+    <div id="admin-login" class="hidden">
+        <div class="card login-box">
+            <h2>Admin Login</h2>
+            <p>Enter password to manage elections</p>
+            <input type="password" id="admin-password" placeholder="Password">
+            <button class="btn btn-primary" onclick="handleLogin()">Login</button>
+        </div>
+    </div>
+
+    <div id="admin-view" class="hidden">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+            <button class="btn btn-danger" onclick="handleLogout()" style="width: auto;">Logout Admin</button>
+        </div>
+        
+        <div id="admin-setup">
+            <div class="card">
+                <h1>Setup Election</h1>
+                <label>Election Title</label>
+                <input type="text" id="el-title" placeholder="e.g. 2026 Student Union">
+                
+                <label>Duration (Minutes)</label>
+                <input type="number" id="el-duration" value="10" min="1">
+                
+                <div id="cat-list"></div>
+                <button class="btn btn-primary" style="background:#6366f1; margin-bottom:10px;" onclick="addCategoryUI()">+ Add New Category (Position)</button>
+                <button class="btn btn-primary" onclick="launchElection()">🚀 Launch Election Now</button>
+            </div>
+        </div>
+
+        <div id="admin-monitor" class="hidden">
+            <div class="card">
+                <div id="results-title"></div>
+                <div id="results-data"></div>
+                <button class="btn btn-danger" onclick="clearAll()" style="margin-top: 20px; width:100%;">Reset Everything</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- SETTINGS ---
+    const ADMIN_PASS = "admin123"; // You can change this password
+
+    // --- DATABASE ---
+    const getDB = () => JSON.parse(localStorage.getItem('vote_v4')) || { active: false, title: "", categories: [], started: false, expiry: 0 };
+    const saveDB = (db) => localStorage.setItem('vote_v4', JSON.stringify(db));
+    
+    let isAdminAuthenticated = false;
+    let draftVotes = {};
+
+    // --- AUTHENTICATION ---
+    function handleLogin() {
+        const passInput = document.getElementById('admin-password');
+        if (passInput.value === ADMIN_PASS) {
+            isAdminAuthenticated = true;
+            passInput.value = "";
+            switchView('admin');
+        } else {
+            alert("Incorrect password!");
+        }
+    }
+
+    function handleLogout() {
+        isAdminAuthenticated = false;
+        switchView('user');
+    }
+
+    // --- TIMER SYSTEM ---
+    function updateTimer() {
+        const db = getDB();
+        const timerDiv = document.getElementById('timer-display');
+        
+        if (db.active && db.expiry > Date.now()) {
+            timerDiv.classList.remove('hidden', 'timer-expired');
+            const diff = db.expiry - Date.now();
+            const mins = Math.floor(diff / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            timerDiv.innerText = `⏳ Election Ending In: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        } else if (db.started && db.expiry <= Date.now()) {
+            if (db.active) {
+                db.active = false;
+                saveDB(db);
+                refreshUI();
+            }
+            timerDiv.classList.remove('hidden');
+            timerDiv.classList.add('timer-expired');
+            timerDiv.innerText = "🛑 Election Closed";
+        } else {
+            timerDiv.classList.add('hidden');
+        }
+    }
+    setInterval(updateTimer, 1000);
+
+    // --- ADMIN ACTIONS ---
+    function addCategoryUI() {
+        const catId = Date.now();
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.id = `cat-${catId}`;
+        div.style.background = '#f1f5f9';
+        div.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <input type="text" class="cat-name" placeholder="Position (e.g. President)" style="flex:1; margin-right:10px;">
+                <button class="btn btn-danger" onclick="this.parentElement.parentElement.remove()">Remove Position</button>
+            </div>
+            <div class="cand-inputs"></div>
+            <button class="btn btn-primary" style="font-size: 0.9rem; margin-top:10px;" onclick="addCandidateInput(this)">+ Add Candidate</button>
+        `;
+        document.getElementById('cat-list').appendChild(div);
+        addCandidateInput(div.querySelector('.btn-primary'));
+    }
+
+    function addCandidateInput(btn) {
+        const container = btn.previousElementSibling;
+        const div = document.createElement('div');
+        div.className = 'admin-cand-item';
+        div.innerHTML = `
+            <input type="file" accept="image/*" onchange="updateThumb(this)" style="width: 90px; font-size: 0.7rem;">
+            <img src="https://via.placeholder.com/60" class="thumb">
+            <input type="text" class="cand-name" placeholder="Candidate Name" style="margin:0; flex:1;">
+            <button class="btn btn-danger" onclick="this.parentElement.remove()">🗑️</button>
+        `;
+        container.appendChild(div);
+    }
+
+    async function updateThumb(input) {
+        const reader = new FileReader();
+        reader.onload = (e) => input.nextElementSibling.src = e.target.result;
+        if(input.files[0]) reader.readAsDataURL(input.files[0]);
+    }
+
+    function launchElection() {
+        const title = document.getElementById('el-title').value;
+        const duration = parseInt(document.getElementById('el-duration').value);
+        const catNodes = document.querySelectorAll('.cat-name');
+        
+        if (!title || catNodes.length === 0) return alert("Fill in title and add at least one position.");
+
+        const categories = [];
+        catNodes.forEach(catNode => {
+            const candNodes = catNode.parentElement.parentElement.querySelectorAll('.admin-cand-item');
+            const candidates = [];
+            candNodes.forEach(node => {
+                candidates.push({
+                    name: node.querySelector('.cand-name').value || "Unnamed",
+                    img: node.querySelector('.thumb').src,
+                    votes: 0
+                });
+            });
+            categories.push({ name: catNode.value || "Position", candidates });
+        });
+
+        const expiry = Date.now() + (duration * 60000);
+        saveDB({ active: true, started: true, title, categories, expiry });
+        localStorage.removeItem('final_submitted');
+        
+        alert("Election Launched!");
+        switchView('user'); // Auto switch to voter view
+    }
+
+    function clearAll() { 
+        if(confirm("This will wipe all data and results. Continue?")) { 
+            localStorage.clear(); 
+            location.reload(); 
+        } 
+    }
+
+    // --- USER ACTIONS ---
+    function selectCandidate(catIdx, candIdx) {
+        draftVotes[catIdx] = candIdx;
+        refreshUI();
+    }
+
+    function submitFinalBallot() {
+        const db = getDB();
+        if (Object.keys(draftVotes).length < db.categories.length) return alert("Please vote for all positions first!");
+        
+        if (confirm("Submit final ballot? Changes cannot be made after this.")) {
+            Object.keys(draftVotes).forEach(catIdx => {
+                db.categories[catIdx].candidates[draftVotes[catIdx]].votes++;
+            });
+            saveDB(db);
+            localStorage.setItem('final_submitted', 'true');
+            refreshUI();
+        }
+    }
+
+    // --- UI RENDERING ---
+    function switchView(view) {
+        const userView = document.getElementById('user-view');
+        const adminView = document.getElementById('admin-view');
+        const adminLogin = document.getElementById('admin-login');
+        
+        // Update Tab Styles
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(`tab-${view}`).classList.add('active');
+
+        if (view === 'user') {
+            userView.classList.remove('hidden');
+            adminView.classList.add('hidden');
+            adminLogin.classList.add('hidden');
+        } else {
+            userView.classList.add('hidden');
+            if (isAdminAuthenticated) {
+                adminView.classList.remove('hidden');
+                adminLogin.classList.add('hidden');
+            } else {
+                adminView.classList.add('hidden');
+                adminLogin.classList.remove('hidden');
+            }
+        }
+        refreshUI();
+    }
+
+    function refreshUI() {
+        const db = getDB();
+        renderAdmin(db);
+        renderUser(db);
+    }
+
+    function renderAdmin(db) {
+        const setup = document.getElementById('admin-setup');
+        const monitor = document.getElementById('admin-monitor');
+        if (!db.started) { 
+            setup.classList.remove('hidden'); 
+            monitor.classList.add('hidden'); 
+        } else {
+            setup.classList.add('hidden'); 
+            monitor.classList.remove('hidden');
+            document.getElementById('results-title').innerHTML = `<h1>Results: ${db.title}</h1>`;
+            let html = '';
+            db.categories.forEach(cat => {
+                const total = cat.candidates.reduce((s, c) => s + c.votes, 0);
+                html += `<h2>${cat.name}</h2>`;
+                cat.candidates.forEach(c => {
+                    const pc = total === 0 ? 0 : Math.round((c.votes/total)*100);
+                    html += `
+                        <div style="margin-bottom:15px; background:#f8fafc; padding:10px; border-radius:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span><img src="${c.img}" class="thumb" style="vertical-align:middle; margin-right:10px;"> <b>${c.name}</b></span>
+                                <b>${c.votes} votes (${pc}%)</b>
+                            </div>
+                            <div style="height:12px; background:#e2e8f0; border-radius:6px; margin-top:8px;">
+                                <div style="width:${pc}%; height:100%; background:var(--primary); border-radius:6px;"></div>
+                            </div>
+                        </div>`;
+                });
+            });
+            document.getElementById('results-data').innerHTML = html;
+        }
+    }
+
+    function renderUser(db) {
+        const container = document.getElementById('user-content');
+        if (!db.started) { 
+            container.innerHTML = "<h1>No Active Election</h1><p style='text-align:center;'>Check back later.</p>"; 
+            return; 
+        }
+        if (localStorage.getItem('final_submitted')) {
+            container.innerHTML = `<div class="card" style="text-align:center;"><h1>✓ Vote Confirmed</h1><p>Your choices for ${db.title} have been recorded.</p></div>`;
+            return;
+        }
+
+        let html = `<h1>${db.title}</h1>`;
+        db.categories.forEach((cat, catIdx) => {
+            html += `<h2>${cat.name}</h2><div class="candidate-grid">`;
+            cat.candidates.forEach((cand, candIdx) => {
+                const isSelected = draftVotes[catIdx] === candIdx;
+                html += `
+                    <div class="candidate-card ${isSelected ? 'selected' : ''}" onclick="selectCandidate(${catIdx}, ${candIdx})">
+                        <img src="${cand.img}" class="candidate-img">
+                        <h3>${cand.name}</h3>
+                        <span style="color:${isSelected ? 'var(--success)' : '#64748b'}">${isSelected ? '✅ Selected' : 'Tap to Choose'}</span>
+                    </div>`;
+            });
+            html += `</div>`;
+        });
+
+        if (db.active && db.expiry > Date.now()) {
+            html += `<button class="btn btn-success" onclick="submitFinalBallot()">CONFIRM & SUBMIT VOTE</button>`;
+        } else {
+            html += `<div class="card" style="margin-top:20px; text-align:center; border-color:var(--danger);"><h3>The Election has ended.</h3></div>`;
+        }
+        container.innerHTML = html;
+    }
+
+    // Initialize UI
+    addCategoryUI(); 
+    refreshUI();
+</script>
+</body>
+</html>
